@@ -35,10 +35,32 @@ void llOwnerSay(string msg);
  * If msg, name or id are blank (i.e. "") they are not used to filter incoming messages. If id is an invalid key or assigned the value NULL_KEY, it is considered blank as well. */
 int llListen(int channel, string name, key id, string msg);
 
+/**
+ * Shows a dialog box in the lower right corner of the avatar's screen (upper right in Viewer 1.x) with a message and choice buttons, as well as an ignore button. This has many uses ranging from simple message delivery to complex menu systems.
+ * Button order is displayed as such:
+ *   9  10 11
+ *   6  7  8
+ *   3  4  5
+ *   0  1  2
+ */
+void llDialog(key avatar, string message, list buttons, int channel);
+
+key llGetOwner();
+void llResetScript();
+void llListenRemove(int);
+
+/** Returns a key that is the UUID of the detected object or avatar number. */
+void llDetectedKey(int);
+
+string llToLower(string);
+int llStringLength(string);
+int llOrd(string value, int index);
+string llChar(int value);
+
 // RLV API
 // https://wiki.secondlife.com/wiki/LSL_Protocol/RestrainedLoveAPI
 
-/** When active, this restriction redirects whatever the user says on the public channel ("/0") to the private channel provided in the option field. If several redirections are issued, the chat message will be redirected to each channel. It does not apply to emotes, and will not trigger any animation (typing start, typing stop, nodding) when talking. This restriction does not supercede @sendchannel. */
+/** When active, this restriction redirects whatever the user says on the public channel ("/0") to the private channel provided in the option field. If several redirections are issued, the chat message will be redirected to each channel. It does not apply to emotes, and will not trigger any animation (typing start, typing stop, nodding) when talking. This restriction does not supercede sendchannel. */
 string rlvRedirectChat(int channel, bool add);
 
 #else // LSL
