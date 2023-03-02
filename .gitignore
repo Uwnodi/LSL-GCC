@@ -1,0 +1,10 @@
+*
+!*/
+!/.gitignore
+
+!/lsl/*.c
+!/lsl/*.h
+!/garble.py
+!/Makefile
+!/LICENSE
+!/README.md
