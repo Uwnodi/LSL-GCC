@@ -2,8 +2,9 @@
 !*/
 !/.gitignore
 
-!/lsl/*.c
+!/lsl/*.cpp
 !/lsl/*.h
+!/lsl/test.lsl
 !/garble.py
 !/Makefile
 !/LICENSE

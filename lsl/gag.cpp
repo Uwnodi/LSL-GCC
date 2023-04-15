@@ -4,11 +4,6 @@
 #define MENU_CHANNEL 819202
 #define LELUTKA_LISTEN 7780
 
-int chat_handle;
-int menu_handle;
-
-int level;
-
 #define LEVEL_OFF 0
 #define LEVEL_LIGHT 1
 #define LEVEL_NORMAL 2
@@ -19,26 +14,31 @@ int level;
 #define NORMAL "Normal"
 #define HEAVY "Heavy"
 
-onStart()
+int chat_handle;
+int menu_handle;
+
+int level;
+
+void onStart()
 {
     llSetLinkAlpha(LINK_SET, 1.0, ALL_SIDES);
     llWhisper(LELUTKA_LISTEN, "play e.3.004.l"); // Animation for LeLUTKA mouth
     llOwnerSay("A gag slips into " + llGetDisplayName(llGetOwner()) + "'s mouth"); // Flavor
-    llOwnerSay(rlvRedirectChat(TEXT_CHANNEL, true)); // Gag-talk
+    llOwnerSay(rlvAddRedirectChat(TEXT_CHANNEL)); // Gag-talk
 
     chat_handle = llListen(TEXT_CHANNEL, "", llGetOwner(), "");
 }
 
-onStop()
+void onStop()
 {
     llSetLinkAlpha(LINK_SET, 0.0, ALL_SIDES);
     llWhisper(LELUTKA_LISTEN, "stop e.3.004.l");
-    llOwnerSay(rlvRedirectChat(TEXT_CHANNEL, false)); // Gag-talk
+    llOwnerSay(rlvRemRedirectChat(TEXT_CHANNEL)); // Gag-talk
     llListenRemove(chat_handle);
 }
 
 begin(default)
-    attach(key id)
+    void attach(key id)
     {
         if (id)
         {
@@ -51,7 +51,7 @@ begin(default)
         }
     }
 
-    listen(int channel, string name, key id, string message)
+    void listen(int channel, string name, key id, string message)
     {
         if (channel == MENU_CHANNEL)
         {
@@ -136,18 +136,18 @@ begin(default)
         }
     }
 
-    touch_start(int num_detected)
+    void touch_start(int num_detected)
     {
         llListenRemove(menu_handle);
 
         key user = llDetectedKey(0);
         menu_handle = llListen(MENU_CHANNEL, "", user, "");
 
-        llDialog(user, "Ball Gag", [LIGHT, NORMAL, HEAVY, REMOVE], MENU_CHANNEL);
+        llDialog(user, "Ball Gag", list(LIGHT, NORMAL, HEAVY, REMOVE), MENU_CHANNEL);
         llSetTimerEvent(15.0);
     }
 
-    changed(int change)
+    void changed(int change)
     {
         if (change & CHANGED_OWNER)
         {
@@ -155,10 +155,9 @@ begin(default)
         }
     }
 
-    timer()
+    void timer()
     {
         llListenRemove(menu_handle);
         llSetTimerEvent(0.0);
     }
-
 end
