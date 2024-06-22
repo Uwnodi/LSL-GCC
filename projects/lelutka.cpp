@@ -1,4 +1,4 @@
-#include "lsl.h"
+#include "../lsl.h"
 
 #define LELUTKA_REPLY_CHANNEL 7779
 #define LELUTKA_LISTEN_CHANNEL 7780

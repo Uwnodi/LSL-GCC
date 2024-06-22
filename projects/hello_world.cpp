@@ -1,4 +1,4 @@
-#include "lsl.h"
+#include "../lsl.h"
 
 default
     void state_entry() {

@@ -7,7 +7,7 @@
  *   the level of gag talk you wish to request. This must be also updated on attach
  */
 
-#include "lsl.h"
+#include "../lsl.h"
 #include "garble.h"
 
 #define GARBLE_CHANNEL 8791003

@@ -2,9 +2,11 @@
 !*/
 !/.gitignore
 
-!/src/*.cpp
-!/src/*.h
-!/garble.py
+!/projects/*.cpp
+!/projects/*.h
+
+!/lsl.h
+
 !/Makefile
 !/LICENSE
 !/README.md

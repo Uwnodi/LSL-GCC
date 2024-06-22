@@ -7,7 +7,7 @@
  *    device can unlock it
  */
 
-#include "lsl.h"
+#include "../lsl.h"
 
 #define MENU_CHANNEL 91782341
 #define VOID_CHANNEL 91782342

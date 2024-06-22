@@ -14,8 +14,9 @@
  * - `timelock.cpp`
  */
 
-#include "lsl.h"
+#include "../lsl.h"
 #include "garble.h"
+#include "timer.h"
 #include "blindfold_gag.h"
 
 
@@ -35,7 +36,7 @@ int blindfoldMode = BLINDFOLD_HIDE; // The current visual mode of the gag
 int gagMode = GAG_HIDE; // The current restriction mode of the gag
 
 
-#define NO_TIMER (int)-1
+#define NO_TIMER -1
 #define MIN_TIMER 60
 #define DEFAULT_TIMER 300
 
@@ -71,6 +72,7 @@ key lockedBy = NULL_KEY; // The UUID of the locker, or `NULL_KEY` if not locked
 #define REM_5m "-5m"
 #define REM_30m "-30m"
 
+
 int menuState = MENU_MAIN; // The state representing the current or last UI menu that was opened
 int menuHandle; // The handle for the callback of the last UI menu that was opened
 key menuUser = NULL_KEY; // The user of the last UI menu that was opened
@@ -99,6 +101,7 @@ string formatTimeDelta(int seconds) {
 }
 
 
+#define FLAG_NONE 0
 #define FLAG_GAG 1
 #define FLAG_BLINDFOLD 2
 #define FLAG_GAG_AND_BLINDFOLD 3
@@ -115,7 +118,7 @@ string formatTimeDelta(int seconds) {
  * - Lock for <Y> (only if `FLAG_TIMER`)
  */
 string statusText(int flags) {
-    string text = llGetDisplayName(llGetOwner()) + "'s Blindfold + Gag\n\n";
+    string text = "\n";
     if (flags & FLAG_GAG) {
         text += "Gag: ";
         if (gagMode == GAG_HIDE) text += "Hidden\n";
@@ -132,11 +135,20 @@ string statusText(int flags) {
         text += "Lock for " + formatTimeDelta(lockTime) + "\n";
     } else {
         if (lockedBy) {
-            if (lockTime == NO_TIMER) text += "Locked by " + llGetDisplayName(lockedBy) + "\n";
-            else text += "Locked by " + llGetDisplayName(lockedBy) + " for " + formatTimeDelta(lockTime) + "\n";
+            text += lockedStatusText() + "\n";
         } else text += "Unlocked\n";
     }
     return text;
+}
+
+string lockedStatusText() {
+    if (lockTime == NO_TIMER) {
+        return "Locked by " + llGetDisplayName(lockedBy);
+    } else {
+        // Need to compute the remaining time, because `lockTime` is only the initial time it was locked for
+        int remainingTime = lockedUntil - llGetUnixTime();
+        return "Locked by " + llGetDisplayName(lockedBy) + " for " + formatTimeDelta(remainingTime);
+    }
 }
 
 
@@ -244,6 +256,12 @@ void updateGagRLV() {
     llMessageLinked(LINK_THIS, SET_GARBLE_LEVEL_LINK_ID + gagMode, "", NULL_KEY);
 }
 
+void updateLockRLV() {
+    if (lockedBy) rlvDetach(No);
+    else rlvDetach(Yes);
+}
+
+
 #define LINK_GAG_LOCKS 117
 #define LINK_BLINDFOLD_LOCKS 118
 
@@ -287,13 +305,57 @@ void setAlpha(int from, int to, float alpha) {
     }
 }
 
+/**
+ * Locks the device, ends menu interaction, and updates the visual state
+ * 
+ * @param user The user that is locking the device
+ * @param time The time that the device is locked (if time locked) or `NO_TIMER` otherwise
+ */
+void lock(key user, int time) {
+    llPlaySound(LOCK_SOUND, 1.0);
+    lockedBy = user;
+    lockTime = time;
+
+    if (time != NO_TIMER) {
+        // If this is time locked, start the timer in order to countdown until unlocked
+        lockedUntil = llGetUnixTime() + lockTime;
+        llMessageLinked(LINK_THIS, START_TIMER_LINK_ID, (string) lockTime, NULL_KEY);
+    }
+
+    resetMenu();
+    updateStateOfEverything();
+    updateLockRLV();
+}
+
+/**
+ * Unlocks the device, ends menu interaction, and updates the visual state
+ */
+void unlock() {
+    llPlaySound(UNLOCK_SOUND, 1.0);
+    lockedBy = NULL_KEY;
+    lockTime = DEFAULT_TIMER;
+
+    resetMenu();
+    updateStateOfEverything();
+    updateLockRLV();
+}
+
 
 default
 
     void attach(key user) {
-        updateStateOfEverything();
-        updateBlindfoldRLV();
-        updateGagRLV();
+        if (user) {
+            updateStateOfEverything();
+            updateBlindfoldRLV();
+            updateGagRLV();
+            updateLockRLV();
+        }
+    }
+
+    void link_message(int source, int num, string str, key id) {
+        if (num == END_TIMER_LINK_ID) {
+            unlock();
+        }
     }
 
     void touch_start(int num_detected) {
@@ -303,10 +365,12 @@ default
             if (lockedBy) {
                 // If the device is currently locked, the only access can be through the person that locked it,
                 // _unless_ the user locked themselves in time lock - then they cannot access
-                if (user == lockedBy && (user != llGetOwner() || lockTime != NO_TIMER)) {
+                if (user == lockedBy && (user != llGetOwner() || lockTime == NO_TIMER)) {
                     openMainMenu(user);
+                } else if (user == llGetOwner()) {
+                    llOwnerSay(lockedStatusText()); // If interacted with via the owner, always send a status message
                 } else {
-
+                    llInstantMessage(user, lockedStatusText()); // Other users get an IM with the status
                 }
             } else {
                 openMainMenu(user); // Anyone can access when unlocked
@@ -324,17 +388,9 @@ default
                 } else if (message == TIMER) {
                     openTimerMenu(id);
                 } else if (message == LOCK) {
-                    // Lock the device from the current user with no timer
-                    llPlaySound(LOCK_SOUND, 1.0);
-                    lockedBy = id;
-                    lockTime = NO_TIMER;
-                    updateStateOfEverything();
+                    lock(id, NO_TIMER);
                 } else if (message == UNLOCK) {
-                    // Unlock the device
-                    llPlaySound(UNLOCK_SOUND, 1.0);
-                    lockedBy = NULL_KEY;
-                    lockTime = DEFAULT_TIMER;
-                    updateStateOfEverything();
+                    unlock();
                 } else if (message == CANCEL) {
                     resetMenu();
                 }
@@ -366,9 +422,7 @@ default
                 if (message == BACK) {
                     openMainMenu(id);
                 } else if (message == LOCK) {
-                    // Lock with timer
-                    llOwnerSay("DEBUG Locked with timer");
-                    resetMenu();
+                    lock(id, lockTime);
                 } else {
                     if (message == ADD_1m) lockTime += 60;
                     else if (message == ADD_5m) lockTime += 300;

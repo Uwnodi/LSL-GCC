@@ -23,20 +23,37 @@
  * - `AddRemove` is a type taking either the value `Add` or `Remove`
  */
 
+struct list;
+struct string;
+struct vector;
+struct rotation;
+
+
 struct string {
-    string(int) {}
+    string() {}
     string(const char*) {}
 
+    explicit string(int) {}
+    explicit string(float) {}
+    explicit string(list) {}
+    explicit string(vector) {}
+    explicit string(rotation) {}
+
     explicit operator int();
+    explicit operator float();
 
     bool operator==(string);
     bool operator!=(string);
+
     string operator+=(string);
 };
 
-string operator+(string lhs, const string rhs);
+string operator+(string, string);
 
 struct key {
+    key() {}
+    key(string) {}
+
     bool operator==(key);
     bool operator!=(key);
 
@@ -44,16 +61,28 @@ struct key {
 };
 
 struct list {
-    template <class... T> list(T...) {}
+    list() {}
+    template <class... T> explicit list(T...) {}
+
+    list operator+(list);
+    list operator+=(list);
 };
 
 struct vector {
+    vector() {}
     vector(float x, float y, float z) : x(x), y(y), z(z) {}
+
+    explicit vector(string) {}
+
     float x, y, z;
 };
 
 struct rotation {
+    rotation() {}
     rotation(float x, float y, float z, float s) : x(x), y(y), z(z), s(s) {}
+
+    explicit rotation(string) {}
+
     float x, y, z, s;
 };
 
@@ -178,7 +207,6 @@ int llGetLinkNumber();
  */
 void llPlaySound(string sound, float volume);
 
-
 /** Returns a string that is the name of the prim the script is attached to. */
 string llGetObjectName();
 
@@ -193,6 +221,44 @@ string llGetObjectName();
  */
 void llSetObjectName(string name);
 
+/**
+ * Returns an integer that is the number of seconds elapsed since 00:00 hours, Jan 1, 1970 UTC from the system clock.
+ */
+int llGetUnixTime();
+
+/**
+ * Sends an Instant Message specified in the string message to the user specified by user.
+ * @param user    avatar UUID
+ * @param message message to be transmitted	
+ */
+void llInstantMessage(key user, string message);
+
+/**
+ * Ask Agent for permission to run certain class of functions. Script execution continues without waiting for a response.
+ * When a response is given, a `run_time_permissions` event is put in the event queue.
+ * 
+ * @param agent - avatar UUID that is in the same region
+ * @param permissions - Permission mask (bitfield containing the permissions to request)
+ */
+void llRequestPermissions(key agent, int permissions);
+
+/**
+ * Start animation anim for agent that granted PERMISSION_TRIGGER_ANIMATION if the permission has not been revoked.
+ * To run this function the script must request the PERMISSION_TRIGGER_ANIMATION permission with `llRequestPermissions`.
+ * 
+ * @param string anim – an item in the inventory of the prim this script is in or built-in animation     
+ */
+void llStartAnimation(string animation);
+
+/**
+ * Returns a list that is src broken into a list of strings, discarding separators, keeping spacers, discards any null (empty string) values generated.
+ * 
+ * @param src        The input string to parse
+ * @param separators separators to be discarded
+ * @param spacers    spacers to be kept
+ */
+list llParseString2List(string src, list separators, list spacers);
+
 
 // ===== RLV API ===== //
 
@@ -204,6 +270,7 @@ extern const YesNo No;
 
 extern const AddRemove Add;
 extern const AddRemove Remove;
+
 
 /** Makes the viewer automatically say the version of the RLV API it implements, immediately on the chat channel number <channel_number> that the script can listen to. Always use a non-zero integer. Remember that regular viewers do not answer anything at all so remove the listener after a timeout. */
 void rlvVersion(int channel);
@@ -266,19 +333,25 @@ extern const key NULL_KEY;
 /** The object has changed owners. This event occurs in the original object when a user takes it or takes a copy of it or when the owner deeds it to a group. The event occurs in the new object when it is first rezzed. */
 extern const int CHANGED_OWNER;
 
-/** refers to the root prim in a multi-prim linked set */
-extern const int LINK_ROOT;
-
-/** refers to all prims */
-extern const int LINK_SET;
-/** refers to all other prims */
-extern const int LINK_ALL_OTHERS;
-/** refers to all children, (everything but the root) */
-extern const int LINK_ALL_CHILDREN;
-/** refers to the prim the script is in */
-extern const int LINK_THIS;
+extern const int LINK_ROOT; // refers to the root prim in a multi-prim linked set
+extern const int LINK_SET; // refers to all prims
+extern const int LINK_ALL_OTHERS; // refers to all other prims
+extern const int LINK_ALL_CHILDREN; // refers to all children, (everything but the root)
+extern const int LINK_THIS; // refers to the prim the script is in
 
 extern const int ALL_SIDES;
+
+extern const int PERMISSION_DEBIT; // take money from agent's account
+extern const int PERMISSION_TAKE_CONTROLS; // take agent's controls
+extern const int PERMISSION_TRIGGER_ANIMATION; // start or stop Animations on agent
+extern const int PERMISSION_ATTACH; // attach/detach from agent
+extern const int PERMISSION_CHANGE_LINKS; // change links
+extern const int PERMISSION_TRACK_CAMERA; // track the agent's camera position and rotation
+extern const int PERMISSION_CONTROL_CAMERA; // control the agent's camera (must be sat on or attached; automatically revoked on stand or detach)
+extern const int PERMISSION_TELEPORT; // teleport the agent
+extern const int PERMISSION_SILENT_ESTATE_MANAGEMENT; // manage estate access without notifying the owner of changes
+extern const int PERMISSION_OVERRIDE_ANIMATIONS; // configure the overriding of default animations on agent  
+extern const int PERMISSION_RETURN_OBJECTS; // Used by `llReturnObjectsByOwner` and `llReturnObjectsByID` to return objects from parcels
 
 
 
