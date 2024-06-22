@@ -1,16 +1,16 @@
 LIGHT = {
-    'ct': 'e',
+    't': 'e',
     'qx': 'k',
-    'jlr': 'a',
+    'jl': 'a',
     'z': 's',
     'f': 'h',
     'dg': 'm',
 }
 
 NORMAL = {
-    'vbct': 'e',
+    'bt': 'e',
     'qx': 'k',
-    'wyjlr': 'a',
+    'wjl': 'a',
     'z': 's',
     'd': 'm',
     'p': 'f',
@@ -18,10 +18,11 @@ NORMAL = {
 }
 
 HEAVY = {
-    'aiouyt': 'e',
+    'u': 'o',
+    'aiyt': 'e',
     'cqx': 'k',
-    'jklrw': 'a',
-    'sz': 'h',
+    'jklw': 'a',
+    'z': 's',
     'bpv': 'f',
     'dfgn': 'm'
 }

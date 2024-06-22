@@ -1,8 +1,7 @@
 #include "lsl.h"
 
-begin(default)
-    void state_entry()
-    {
+default
+    void state_entry() {
         llOwnerSay("Hello World!");
     }
 end
