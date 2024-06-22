@@ -7,7 +7,7 @@ SED := sed -E 's/_START "([^"]*)" _END/"\1"/g; s/_START ([0-9\.]+) _END/"\1"/g; 
 .PHONY : run
 run :
 	@mkdir -p out
-	@$(GCC) src/$(target).cpp | $(SED) > out/$(target).lsl
+	@$(GCC) projects/$(target).cpp | $(SED) > out/$(target).lsl
 
 .PHONY : clean
 clean : 
