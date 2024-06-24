@@ -2,11 +2,24 @@
 #define LSL_H
 
 // When in IDE, we use a slightly different set of macros and defines, based on what we need to appease C++ intellisense
-// At compile time, we pass -DLSL_C=on to enable this switch, which gives us valid LSL output
+// At compile time, we pass `-DLSL_C` to enable this switch, which gives us valid LSL output
 #ifndef LSL_C
 
+
+/**
+ * LSL supports multiple states and state transitions. We support declarations of state and state transitions in two forms:
+ * 
+ * - `default ... end` declares the default state
+ * - `declare_state(name) ... end` declares a state named `name`
+ * 
+ * State transitions are done via the keyword `goto_state(name)`. Note that states are not a required abstraction to model
+ * state machines in LSL, and they can be achieved by any other means as well.
+ */
 #define default struct DefaultState {
+#define declare_state(name) struct state__ ## name {
+#define goto_state(name) do {} while (0) 
 #define end };
+
 
 /*
  * LSL Data types are
@@ -21,7 +34,25 @@
  * In addition, to support the RLV API, we define a few custom data types
  * - `YesNo` is a type taking either the value `Yes` or `No`
  * - `AddRemove` is a type taking either the value `Add` or `Remove`
+ *
+ * Most type conversions in LSL can be represented within the semantics of C++, however we suffer from type conversions
+ * between literal types which are both C++ types. For example:
+ * 
+ * ```cpp
+ *     int i = (int) "123" // `const char*` to `int` cast, legal through pointer-to-int conversion
+ *     float f = (float) "123.4"; // `const char*` to `float` cast, illegal in C++ 
+ *     string s; // Both the below are legal because they use a custom type `string` which we define operators for
+ *     i = (int) s;
+ *     f = (float) s;
+ * ```
+ * 
+ * So, in order to allow this we add `cast_float` as a keyword, which does a `pointer-to-int`, followed by `float` cast in C++
+ * to satisfy legality, and in LSL can be converted to a raw float cast as desired.
+ * 
+ * Another illegal type conversion is `const char* + const char*`, however this should always be entirely unnecessary, as one
+ * argument should always be `string`, which enables the use of the operator overload.
  */
+#define cast_float (float)(int)
 
 struct list;
 struct string;
@@ -48,6 +79,8 @@ struct string {
     string operator+=(string);
 };
 
+// Standalone method to allow `const char* + string` to be included
+// Note that this disallows `const char* + const char*`, which is fine given that should be always unnecessary
 string operator+(string, string);
 
 struct key {
@@ -64,8 +97,8 @@ struct list {
     list() {}
     template <class... T> explicit list(T...) {}
 
-    list operator+(list);
-    list operator+=(list);
+    template <class T> list operator+(T);
+    template <class T> list operator+=(T);
 };
 
 struct vector {
@@ -86,6 +119,18 @@ struct rotation {
     float x, y, z, s;
 };
 
+/**
+ * In addition to LSL types, we create a number of `enum` based types, which are used to represent various
+ * bitfields taken by specific methods.
+ */
+struct Permission {
+    Permission operator|(const Permission) const;
+    Permission operator&(const Permission) const;
+    Permission operator^(const Permission) const;
+};
+
+struct ListStat {};
+
 
 
 
@@ -99,7 +144,8 @@ string llChar(int value);
 key llDetectedKey(int number);
 
 /**
- * Shows a dialog box in the lower right corner of the avatar's screen (upper right in Viewer 1.x) with a message and choice buttons, as well as an ignore button. This has many uses ranging from simple message delivery to complex menu systems.
+ * Shows a dialog box in the lower right corner of the avatar's screen (upper right in Viewer 1.x) with a message and
+ * choice buttons, as well as an ignore button. This has many uses ranging from simple message delivery to complex menu systems.
  * Button order is displayed as such:
  *   9  10 11
  *   6  7  8
@@ -120,9 +166,6 @@ int llGetListLength(list src);
 /** Returns a key that is the object owner's UUID. */
 key llGetOwner();
 
-/** Returns a string that is at index in src. index supports negative indexes. */
-string llList2String(list src, int index);
-
 /**
  * Sets a handle for `msg` on `channel` from `name` and `id`. If msg, name or id are blank (i.e. "") they are not used to filter
  * incoming messages. If id is an invalid key or assigned the value NULL_KEY, it is considered blank as well.
@@ -136,9 +179,9 @@ string llList2String(list src, int index);
 int llListen(int channel, string name, key id, string message);
 
 /**
- * Removes listen event callback handle
+ * Removes listen event callback handle.
  * 
- * Caveats
+ * Caveats:
  * - On state change or script reset all listens are removed automatically
  * - No error is thrown if `handle` has already been released or is invalid.
  * 
@@ -155,7 +198,9 @@ void llOwnerSay(string msg);
 /** Returns a list that is src broken into a list of strings, discarding separators, keeping spacers, discards any null (empty string) values generated. */
 list llParseString2List(string src, list separators, list spacers);
 
-/** Resets the script. On script reset:
+/** 
+ * Resets the script. On script reset:
+ * 
  * - The current event/function is exited without further execution or return.
  * - Any granted URLs are released.
  * - All global variables are set to their defaults.
@@ -185,7 +230,10 @@ string llToLower(string);
 void llWhisper(int channel, string msg);
 
 /**
- * The purpose of this function is to allow scripts in the same object to communicate. It triggers a link_message event with the same parameters num, str, and id in all scripts in the prim(s) described by link.
+ * The purpose of this function is to allow scripts in the same object to communicate. It triggers a `link_message` event
+ * with the same parameters num, str, and id in all scripts in the prim(s) described by link. You can use `id` as a second
+ * string field. The sizes of `str` and `id` are only limited by available script memory.
+ * 
  * @param link Link number (0: unlinked, 1: root prim, >1: child prims and seated avatars) or a LINK_* flag, controls which prim(s) receive the link_message.
  * @param num  Value of the second parameter of the resulting link_message event.
  * @param str  Value of the third parameter of the resulting link_message event.
@@ -196,7 +244,9 @@ void llMessageLinked(int link, int num, string str, key id);
 /**
  * Returns an integer that is the link number of the prim containing the script.
  * 
- * 0 means the prim is not linked, 1 the prim is the root, 2 the prim is the first child, etc. Links are numbered in the reverse order in which they were linked -- if you select a box, a sphere and a cylinder in that order, then link them, the cylinder is 1, the sphere is 2 and the box is 3. The last selected prim has the lowest link number.
+ * 0 means the prim is not linked, 1 the prim is the root, 2 the prim is the first child, etc. Links are numbered in
+ * the reverse order in which they were linked -- if you select a box, a sphere and a cylinder in that order, then link
+ * them, the cylinder is 1, the sphere is 2 and the box is 3. The last selected prim has the lowest link number.
  */
 int llGetLinkNumber();
 
@@ -222,7 +272,7 @@ string llGetObjectName();
 void llSetObjectName(string name);
 
 /**
- * Returns an integer that is the number of seconds elapsed since 00:00 hours, Jan 1, 1970 UTC from the system clock.
+ * @returns an integer that is the number of seconds elapsed since 00:00 hours, Jan 1, 1970 UTC from the system clock.
  */
 int llGetUnixTime();
 
@@ -240,7 +290,7 @@ void llInstantMessage(key user, string message);
  * @param agent - avatar UUID that is in the same region
  * @param permissions - Permission mask (bitfield containing the permissions to request)
  */
-void llRequestPermissions(key agent, int permissions);
+void llRequestPermissions(key agent, Permission permissions);
 
 /**
  * Start animation anim for agent that granted PERMISSION_TRIGGER_ANIMATION if the permission has not been revoked.
@@ -258,6 +308,90 @@ void llStartAnimation(string animation);
  * @param spacers    spacers to be kept
  */
 list llParseString2List(string src, list separators, list spacers);
+
+/**
+ * Returns a float that is at `index` in `src`. `index` supports negative indicies.
+ * 
+ * - If index describes a location not in src then zero is returned.
+ * - If the type of the element at index in src is not a float it is typecast to a float. If it cannot be
+ *   typecast zero is returned.
+ */
+float llList2Float(list src, int index);
+
+/**
+ * Returns an int that is at `index` in `src`. `index` supports negative indicies.
+ * 
+ * - If index describes a location not in src then zero is returned.
+ * - If the type of the element at index in src is not an int it is typecast to an int. If it cannot be
+ *   typecast zero is returned.
+ */
+int llList2Integer(list src, int index);
+
+/**
+ * Returns a key that is at `index` in `src`. `index` supports negative indicies.
+ * 
+ * - If index describes a location not in src then an empty string (`""`) is returned.
+ * - If the type of the element at index in src is not a key it is typecast to a key. If it cannot be
+ *   typecast an empty string.
+ */
+key llList2Key(list src, int index);
+
+/**
+ * Returns a rotation that is at `index` in `src`. `index` supports negative indicies.
+ * 
+ * - If index describes a location not in src then `ZERO_ROTATION` is returned.
+ * - If the type of the element at index in src is not a rotation then `ZERO_ROTATION` is returned
+ */
+rotation llList2Rot(list src, int index);
+
+/**
+ * Returns a string that is at `index` in `src`. `index` supports negative indicies.
+ * 
+ * - If index describes a location not in src then an empty string (`""`) is returned.
+ * - If the type of the element at index in src is not a key it is typecast to a string.
+ */
+string llList2String(list src, int index);
+
+/**
+ * Returns a vector that is at `index` in `src`. `index` supports negative indicies.
+ * 
+ * - If index describes a location not in src then `ZERO_VECTOR` is returned.
+ * - If the type of the element at index in src is not a vector then `ZERO_VECTOR` is returned
+ */
+vector llList2Vector(list src, int index);
+
+/**
+ * Returns the integer index of the first instance of `test` in `src`.
+ * 
+ * ### Caveats
+ * - If `test` is not found in `src`, -1 is returned.
+ * - If `test` is an empty list the value returned is 0 rather than -1.
+ * 
+ * @param src  what to search in (haystack)
+ * @param test what to search for (needle)
+ */
+int llListFindList(list src, list test);
+
+/**
+ * Returns a float that is the result of performing statistical aggregate function `operation` on `src`. If a list entry
+ * type is not a float or an integer it is silently ignored.
+ * 
+ * @param operation A `LIST_STAT_*` flag
+ * @param src The input list
+ */
+float llListStatistics(ListStat operation, list src);
+
+/**
+ * Returns a list of all the entries in the strided list whose index is a multiple of stride in the range start to end. This is
+ * equivalent to the slicing operation `src[from:to:stride]`. This function supports negative integers
+ * 
+ * @param src    The source list to take from
+ * @param from   The start index, inclusive
+ * @param to     The end index
+ * @param stride The step size, if less than 1 it is assumed to be 1
+ */
+list llList2ListStrided(list src, int from, int to, int stride);
+
 
 
 // ===== RLV API ===== //
@@ -329,6 +463,8 @@ void rlvCamMaxDistance(YesNo value, float distance);
 
 
 extern const key NULL_KEY;
+extern const vector ZERO_VECTOR;
+extern const rotation ZERO_ROTATION;
 
 /** The object has changed owners. This event occurs in the original object when a user takes it or takes a copy of it or when the owner deeds it to a group. The event occurs in the new object when it is first rezzed. */
 extern const int CHANGED_OWNER;
@@ -341,24 +477,38 @@ extern const int LINK_THIS; // refers to the prim the script is in
 
 extern const int ALL_SIDES;
 
-extern const int PERMISSION_DEBIT; // take money from agent's account
-extern const int PERMISSION_TAKE_CONTROLS; // take agent's controls
-extern const int PERMISSION_TRIGGER_ANIMATION; // start or stop Animations on agent
-extern const int PERMISSION_ATTACH; // attach/detach from agent
-extern const int PERMISSION_CHANGE_LINKS; // change links
-extern const int PERMISSION_TRACK_CAMERA; // track the agent's camera position and rotation
-extern const int PERMISSION_CONTROL_CAMERA; // control the agent's camera (must be sat on or attached; automatically revoked on stand or detach)
-extern const int PERMISSION_TELEPORT; // teleport the agent
-extern const int PERMISSION_SILENT_ESTATE_MANAGEMENT; // manage estate access without notifying the owner of changes
-extern const int PERMISSION_OVERRIDE_ANIMATIONS; // configure the overriding of default animations on agent  
-extern const int PERMISSION_RETURN_OBJECTS; // Used by `llReturnObjectsByOwner` and `llReturnObjectsByID` to return objects from parcels
+extern const Permission PERMISSION_DEBIT; // take money from agent's account
+extern const Permission PERMISSION_TAKE_CONTROLS; // take agent's controls
+extern const Permission PERMISSION_TRIGGER_ANIMATION; // start or stop Animations on agent
+extern const Permission PERMISSION_ATTACH; // attach/detach from agent
+extern const Permission PERMISSION_CHANGE_LINKS; // change links
+extern const Permission PERMISSION_TRACK_CAMERA; // track the agent's camera position and rotation
+extern const Permission PERMISSION_CONTROL_CAMERA; // control the agent's camera (must be sat on or attached; automatically revoked on stand or detach)
+extern const Permission PERMISSION_TELEPORT; // teleport the agent
+extern const Permission PERMISSION_SILENT_ESTATE_MANAGEMENT; // manage estate access without notifying the owner of changes
+extern const Permission PERMISSION_OVERRIDE_ANIMATIONS; // configure the overriding of default animations on agent  
+extern const Permission PERMISSION_RETURN_OBJECTS; // Used by `llReturnObjectsByOwner` and `llReturnObjectsByID` to return objects from parcels
 
+extern const ListStat LIST_STAT_RANGE; // Calculates the range.
+extern const ListStat LIST_STAT_MIN; // Calculates the smallest number.
+extern const ListStat LIST_STAT_MAX; // Calculates the largest number.
+extern const ListStat LIST_STAT_MEAN; // Calculates the mean (average).
+extern const ListStat LIST_STAT_MEDIAN; // Calculates the median number.
+extern const ListStat LIST_STAT_STD_DEV; // Calculates the standard deviation.
+extern const ListStat LIST_STAT_SUM; // Calculates the sum.
+extern const ListStat LIST_STAT_SUM_SQUARES; // Calculates the sum of the squares.
+extern const ListStat LIST_STAT_NUM_COUNT; // Determines the number of float and integer elements.
+extern const ListStat LIST_STAT_GEOMETRIC_MEAN; // Calculates the geometric mean.
 
 
 #else // LSL_C
 
 #define default default {
+#define declare_state(name) state name {
+#define goto_state(name) state name
 #define end }
+
+#define cast_float (float)
 
 #define int integer
 #define bool integer

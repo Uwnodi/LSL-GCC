@@ -9,8 +9,7 @@
 
 #include "../lsl.h"
 #include "garble.h"
-
-#define GARBLE_CHANNEL 8791003
+#include "blindfold_gag.h"
 
 int level = GARBLE_NONE;
 int listenHandle;
