@@ -12,11 +12,11 @@
 #ifndef LSL_C
 
 
-/**
+/*
  * LSL supports multiple states and state transitions. We support declarations of state and state transitions in two forms:
  * 
- * - `default ... end` declares the default state
- * - `declare_state(name) ... end` declares a state named `name`
+ * - `begin() ... end` declares the default state
+ * - `begin(name) ... end` declares a state named `name`
  * 
  * State transitions are done via the keyword `state name;`. Note that states are not a required abstraction to model
  * state machines in LSL, and they can be achieved by any other means as well.
@@ -29,7 +29,8 @@ struct state {};
 
 
 /*
- * LSL Data types are
+ * LSL Data types are:
+ *
  * - `int` (32-bit signed integer)
  * - `float` (32-bit IEEE 754 floating point)
  * - `string` (A class representing a string, which is representable as `const char*`)
