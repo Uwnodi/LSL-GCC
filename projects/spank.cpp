@@ -5,7 +5,7 @@
 
 #include "../lsl.h"
 
-default
+begin()
     void touch_start(int num_detected) {
         key user = llDetectedKey(0);
         if (user) {

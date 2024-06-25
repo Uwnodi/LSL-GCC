@@ -1,6 +1,12 @@
 #ifndef LSL_H
 #define LSL_H
 
+#define IS_ ~, ~
+#define IS_default ~ , ~
+#define ARG3(a, b, c, ...) c
+#define CALL(f, ...) f(__VA_ARGS__)
+
+
 // When in IDE, we use a slightly different set of macros and defines, based on what we need to appease C++ intellisense
 // At compile time, we pass `-DLSL_C` to enable this switch, which gives us valid LSL output
 #ifndef LSL_C
@@ -12,13 +18,14 @@
  * - `default ... end` declares the default state
  * - `declare_state(name) ... end` declares a state named `name`
  * 
- * State transitions are done via the keyword `goto_state(name)`. Note that states are not a required abstraction to model
+ * State transitions are done via the keyword `state name;`. Note that states are not a required abstraction to model
  * state machines in LSL, and they can be achieved by any other means as well.
  */
-#define default struct DefaultState {
-#define declare_state(name) struct state__ ## name {
-#define goto_state(name) do {} while (0) 
-#define end };
+struct state {};
+
+#define default _default
+#define begin(name) struct {
+#define end } ;
 
 
 /*
@@ -192,9 +199,6 @@ void llListenRemove(int handle);
 /** Calculate the ordinal value for a character in a string. */
 int llOrd(string value, int index);
 
-/** Says msg to the object's owner only, if the owner is currently in the same region. */
-void llOwnerSay(string msg);
-
 /** Returns a list that is src broken into a list of strings, discarding separators, keeping spacers, discards any null (empty string) values generated. */
 list llParseString2List(string src, list separators, list spacers);
 
@@ -211,8 +215,45 @@ list llParseString2List(string src, list separators, list spacers);
  */
 void llResetScript();
 
-/** Says the text supplied in string msg on channel supplied in integer channel. */
+/**
+ * Says `msg` to the object's owner only, if the owner is currently in the same region.
+ */
+void llOwnerSay(string msg);
+
+/**
+ * Whispers the text supplied in string `msg` on channel supplied in integer `channel`. Whispers can only be heard within
+ * 10 meters of the speaking prim (rather than the root).
+ */
+void llWhisper(int channel, string msg);
+
+/**
+ * Says the text supplied in string `msg` on channel supplied in integer `channel`. The message can be heard 20m away,
+ * usually (see caveats)
+ */
 void llSay(int channel, string msg);
+
+/**
+ * Shouts the text supplied in string `msg` on channel supplied in integer `channel`. Shouts can be heard within 100
+ * meters of the speaking prim (rather than the root).
+ */
+void llShout(int channel, string msg);
+
+/**
+ * Says the string `msg` on channel number `channel` that can be heard anywhere in the region by a script listening on channel.
+ */
+void llRegionSay(int channel, string msg);
+
+/**
+ * Says the text supplied in string `msg` on channel supplied in integer `channel` to the object or avatar specified by `target`
+ */
+void llRegionSayTo(key target, int channel, string msg);
+
+/**
+ * Sends an Instant Message specified in the string message to the user specified by user.
+ * @param user    avatar UUID
+ * @param message message to be transmitted	
+ */
+void llInstantMessage(key user, string message);
 
 /** If a prim exists in the link set at link, set alpha on face of that prim. */
 void llSetLinkAlpha(int link, float alpha, int face);
@@ -225,9 +266,6 @@ int llStringLength(string);
 
 /** Returns a string that is src with all lower-case letters */
 string llToLower(string);
-
-/** Whispers the text supplied in string msg on channel supplied in integer channel. */
-void llWhisper(int channel, string msg);
 
 /**
  * The purpose of this function is to allow scripts in the same object to communicate. It triggers a `link_message` event
@@ -275,13 +313,6 @@ void llSetObjectName(string name);
  * @returns an integer that is the number of seconds elapsed since 00:00 hours, Jan 1, 1970 UTC from the system clock.
  */
 int llGetUnixTime();
-
-/**
- * Sends an Instant Message specified in the string message to the user specified by user.
- * @param user    avatar UUID
- * @param message message to be transmitted	
- */
-void llInstantMessage(key user, string message);
 
 /**
  * Ask Agent for permission to run certain class of functions. Script execution continues without waiting for a response.
@@ -421,7 +452,11 @@ void rlvGetBlacklist(int channel);
  */
 void rlvDetach(YesNo value);
 
-/** When active, this restriction redirects whatever the user says on the public channel ("/0") to the private channel provided in the option field. If several redirections are issued, the chat message will be redirected to each channel. It does not apply to emotes, and will not trigger any animation (typing start, typing stop, nodding) when talking. */
+/**
+ * When active, this restriction redirects whatever the user says on the public channel ("/0") to the private channel provided
+ * in the option field. If several redirections are issued, the chat message will be redirected to each channel. It does not
+ * apply to emotes, and will not trigger any animation (typing start, typing stop, nodding) when talking.
+ */
 void rlvRedirectChat(AddRemove value, int channel);
 
 /**
@@ -466,6 +501,8 @@ extern const key NULL_KEY;
 extern const vector ZERO_VECTOR;
 extern const rotation ZERO_ROTATION;
 
+extern const float PI;
+
 /** The object has changed owners. This event occurs in the original object when a user takes it or takes a copy of it or when the owner deeds it to a group. The event occurs in the new object when it is first rezzed. */
 extern const int CHANGED_OWNER;
 
@@ -503,9 +540,7 @@ extern const ListStat LIST_STAT_GEOMETRIC_MEAN; // Calculates the geometric mean
 
 #else // LSL_C
 
-#define default default {
-#define declare_state(name) state name {
-#define goto_state(name) state name
+#define begin(name) CALL(ARG3, IS_ ## name, default, state name) {
 #define end }
 
 #define cast_float (float)
@@ -515,9 +550,9 @@ extern const ListStat LIST_STAT_GEOMETRIC_MEAN; // Calculates the geometric mean
 #define false FALSE
 #define true TRUE
 #define void 
-#define list(...) [ __VA_ARGS__ ]
-#define vector(...) < __VA_ARGS__ >
-#define rotation(...) < __VA_ARGS__ >
+#define list(...) [__VA_ARGS__]
+#define vector(x, y, z) <x, y, z>
+#define rotation(x, y, z, s) <x, y, z, s>
 
 #define RLV_LITERAL(x) _START x _END
 

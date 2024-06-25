@@ -341,7 +341,7 @@ void unlock() {
 }
 
 
-default
+begin()
 
     void attach(key user) {
         if (user) {

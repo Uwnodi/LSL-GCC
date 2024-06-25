@@ -8,7 +8,7 @@
 #include "../lsl.h"
 #include "timer.h"
 
-default
+begin()
     void link_message(int source, int num, string str, key id) {
         if (num == START_TIMER_LINK_ID) {
             llSetTimerEvent((int) str);

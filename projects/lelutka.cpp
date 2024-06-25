@@ -3,7 +3,7 @@
 
 int listen_handle;
 
-default
+begin()
     void attach(key avatar) {
         // API call to get the list of all expressions from wearing a LeLUTKA head
         listen_handle = llListen(LELUTKA_REPLY_CHANNEL, "", NULL_KEY, "");

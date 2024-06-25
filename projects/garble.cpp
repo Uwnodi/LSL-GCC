@@ -14,7 +14,7 @@
 int level = GARBLE_NONE;
 int listenHandle;
 
-default
+begin()
 
     void link_message(int source, int num, string str, key id)
     {

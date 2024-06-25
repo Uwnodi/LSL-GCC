@@ -117,7 +117,7 @@ void unlock() {
     rlvDetach(Yes);
 }
 
-default
+begin()
 
     void attach(key user) {
         if (user != NULL_KEY && locked) {

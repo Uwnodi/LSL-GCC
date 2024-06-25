@@ -17,15 +17,15 @@
 
 
 list COLOR_VALUES = list( \
-    "Black", vector(0, 0, 0), \
-    "Blue", vector(6, 54, 110), \
-    "Red", vector(84, 6, 3), \
-    "White", vector(255, 255, 255), \
-    "Pink", vector(255, 100, 178), \
-    "Purple", vector(89, 32, 145), \
-    "Green", vector(2, 75, 25), \
+    "Black",    vector(0  , 0  , 0  ), \
+    "Blue",     vector(6  , 54 , 110), \
+    "Red",      vector(84 , 6  , 3  ), \
+    "White",    vector(255, 255, 255), \
+    "Pink",     vector(255, 100, 178), \
+    "Purple",   vector(89 , 32 , 145), \
+    "Green",    vector(2  , 75 , 25 ), \
     "Lavender", vector(126, 123, 144), \
-    "Magenta", vector(200, 0, 200) );
+    "Magenta",  vector(200, 0  , 200) );
 
 
 #define MENU_MAIN 0
@@ -74,12 +74,12 @@ void openColorsMenu(key user) {
 }
 
 
-default
+begin()
     void attach(key user) {
         if (user) {
-            llWhisper(LELUTKA_LISTEN, "play e.3.004.l");
+            llRegionSayTo(user, LELUTKA_LISTEN, "play e.3.004.l");
         } else {
-            llWhisper(LELUTKA_LISTEN, "stop e.3.004.l");
+            llRegionSayTo(llGetOwner(), LELUTKA_LISTEN, "stop e.3.004.l");
         }
     }
 

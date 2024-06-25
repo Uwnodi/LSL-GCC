@@ -9,6 +9,12 @@ run :
 	@mkdir -p out
 	@$(GCC) projects/$(target).cpp | $(SED) > out/$(target).lsl
 
+.PHONY : test
+test :
+	@mkdir -p out
+	@$(GCC) misc/test.h | $(SED) > out/test.lsl
+	@python misc/test.py
+
 .PHONY : clean
 clean : 
 	@rm -rf out

@@ -4,6 +4,7 @@
 
 !/projects/*.cpp
 !/projects/*.h
+!/misc/*.*
 
 !/lsl.h
 
