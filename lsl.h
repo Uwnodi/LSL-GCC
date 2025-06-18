@@ -14,10 +14,10 @@
 
 /*
  * LSL supports multiple states and state transitions. We support declarations of state and state transitions in two forms:
- * 
+ *
  * - `begin() ... end` declares the default state
  * - `begin(name) ... end` declares a state named `name`
- * 
+ *
  * State transitions are done via the keyword `state name;`. Note that states are not a required abstraction to model
  * state machines in LSL, and they can be achieved by any other means as well.
  */
@@ -38,25 +38,25 @@ struct state {};
  * - `list` (A dynamic sized array containing any non-list data type, represented with `[` square `]` brackets)
  * - `vector` (A 3-tuple of `float` values, represented with `<` carets `>`, accessible with the fields `x`, `y`, and `z`)
  * - `rotation` (A 4-tuple of `float` values, represented with `<` carets `>`, accessible with the fields `x`, `y`, `z`, and `s`)
- * 
+ *
  * In addition, to support the RLV API, we define a few custom data types
  * - `YesNo` is a type taking either the value `Yes` or `No`
  * - `AddRemove` is a type taking either the value `Add` or `Remove`
  *
  * Most type conversions in LSL can be represented within the semantics of C++, however we suffer from type conversions
  * between literal types which are both C++ types. For example:
- * 
+ *
  * ```cpp
  *     int i = (int) "123" // `const char*` to `int` cast, legal through pointer-to-int conversion
- *     float f = (float) "123.4"; // `const char*` to `float` cast, illegal in C++ 
+ *     float f = (float) "123.4"; // `const char*` to `float` cast, illegal in C++
  *     string s; // Both the below are legal because they use a custom type `string` which we define operators for
  *     i = (int) s;
  *     f = (float) s;
  * ```
- * 
+ *
  * So, in order to allow this we add `cast_float` as a keyword, which does a `pointer-to-int`, followed by `float` cast in C++
  * to satisfy legality, and in LSL can be converted to a raw float cast as desired.
- * 
+ *
  * Another illegal type conversion is `const char* + const char*`, however this should always be entirely unnecessary, as one
  * argument should always be `string`, which enables the use of the operator overload.
  */
@@ -107,6 +107,8 @@ struct list {
 
     template <class T> list operator+(T);
     template <class T> list operator+=(T);
+    template <class T> bool operator==(T);
+    operator bool() const { return llGetListLength(*this) > 0; }
 };
 
 struct vector {
@@ -135,6 +137,12 @@ struct Permission {
     Permission operator|(const Permission) const;
     Permission operator&(const Permission) const;
     Permission operator^(const Permission) const;
+};
+
+struct Sensor {
+    Sensor operator|(const Sensor) const;
+    Sensor operator&(const Sensor) const;
+    Sensor operator^(const Sensor) const;
 };
 
 struct ListStat {};
@@ -177,7 +185,7 @@ key llGetOwner();
 /**
  * Sets a handle for `msg` on `channel` from `name` and `id`. If msg, name or id are blank (i.e. "") they are not used to filter
  * incoming messages. If id is an invalid key or assigned the value NULL_KEY, it is considered blank as well.
- * 
+ *
  * @param channel input chat channel, any integer value (-2147483648 through 2147483647)
  * @param name    filter for specific prim name or avatar legacy name
  * @param id      filter for specific avatar or prim UUID
@@ -188,11 +196,11 @@ int llListen(int channel, string name, key id, string message);
 
 /**
  * Removes listen event callback handle.
- * 
+ *
  * Caveats:
  * - On state change or script reset all listens are removed automatically
  * - No error is thrown if `handle` has already been released or is invalid.
- * 
+ *
  * @param handle handle to control the `listen` event
  */
 void llListenRemove(int handle);
@@ -203,9 +211,20 @@ int llOrd(string value, int index);
 /** Returns a list that is src broken into a list of strings, discarding separators, keeping spacers, discards any null (empty string) values generated. */
 list llParseString2List(string src, list separators, list spacers);
 
-/** 
+/**
+ * Returns a list that is src broken into a list, discarding separators, keeping spacers, keeping any null values generated.
+ *
+ * https://wiki.secondlife.com/wiki/LlParseStringKeepNulls
+ *
+ * @param src           source string
+ * @param separators    separators to be discarded
+ * @param spacers       spacers to be kept
+ */
+list llParseStringKeepNulls( string src, list separators, list spacers );
+
+/**
  * Resets the script. On script reset:
- * 
+ *
  * - The current event/function is exited without further execution or return.
  * - Any granted URLs are released.
  * - All global variables are set to their defaults.
@@ -252,7 +271,7 @@ void llRegionSayTo(key target, int channel, string msg);
 /**
  * Sends an Instant Message specified in the string message to the user specified by user.
  * @param user    avatar UUID
- * @param message message to be transmitted	
+ * @param message message to be transmitted
  */
 void llInstantMessage(key user, string message);
 
@@ -272,7 +291,7 @@ string llToLower(string);
  * The purpose of this function is to allow scripts in the same object to communicate. It triggers a `link_message` event
  * with the same parameters num, str, and id in all scripts in the prim(s) described by link. You can use `id` as a second
  * string field. The sizes of `str` and `id` are only limited by available script memory.
- * 
+ *
  * @param link Link number (0: unlinked, 1: root prim, >1: child prims and seated avatars) or a LINK_* flag, controls which prim(s) receive the link_message.
  * @param num  Value of the second parameter of the resulting link_message event.
  * @param str  Value of the third parameter of the resulting link_message event.
@@ -282,7 +301,7 @@ void llMessageLinked(int link, int num, string str, key id);
 
 /**
  * Returns an integer that is the link number of the prim containing the script.
- * 
+ *
  * 0 means the prim is not linked, 1 the prim is the root, 2 the prim is the first child, etc. Links are numbered in
  * the reverse order in which they were linked -- if you select a box, a sphere and a cylinder in that order, then link
  * them, the cylinder is 1, the sphere is 2 and the box is 3. The last selected prim has the lowest link number.
@@ -291,7 +310,7 @@ int llGetLinkNumber();
 
 /**
  * Plays attached sound once at volume
- * @param sound - a sound in the inventory of the prim this script is in or a UUID of a sound	
+ * @param sound - a sound in the inventory of the prim this script is in or a UUID of a sound
  * @param volume - between 0.0 (silent) and 1.0 (loud) (0.0 <= volume <= 1.0)
  */
 void llPlaySound(string sound, float volume);
@@ -302,7 +321,7 @@ string llGetObjectName();
 /**
  * Sets the prim's name according to the name parameter. If this function is called from a child prim
  * in a linked set, it will change the name of the child prim and not the root prim.
- * 
+ *
  * - The name is limited to 63 characters. Longer prim names are cut short.
  * - Names can only consist of the 95 printable characters found in the ASCII-7 (non-extended) character set,
  *   with the exception of the vertical bar/pipe character
@@ -318,7 +337,7 @@ int llGetUnixTime();
 /**
  * Ask Agent for permission to run certain class of functions. Script execution continues without waiting for a response.
  * When a response is given, a `run_time_permissions` event is put in the event queue.
- * 
+ *
  * @param agent - avatar UUID that is in the same region
  * @param permissions - Permission mask (bitfield containing the permissions to request)
  */
@@ -327,23 +346,43 @@ void llRequestPermissions(key agent, Permission permissions);
 /**
  * Start animation anim for agent that granted PERMISSION_TRIGGER_ANIMATION if the permission has not been revoked.
  * To run this function the script must request the PERMISSION_TRIGGER_ANIMATION permission with `llRequestPermissions`.
- * 
- * @param string anim – an item in the inventory of the prim this script is in or built-in animation     
+ *
+ * @param string anim – an item in the inventory of the prim this script is in or built-in animation
  */
 void llStartAnimation(string animation);
 
 /**
  * Returns a list that is src broken into a list of strings, discarding separators, keeping spacers, discards any null (empty string) values generated.
- * 
+ *
  * @param src        The input string to parse
  * @param separators separators to be discarded
  * @param spacers    spacers to be kept
  */
 list llParseString2List(string src, list separators, list spacers);
 
+
+/**
+ * Returns a string that is the list src converted to a string with separator between the entries.
+ *
+ * https://wiki.secondlife.com/wiki/LlDumpList2String
+ * @param src       source list
+ * @param separator separator
+ */
+string llDumpList2String( list src, string separator );
+
+/**
+ * Returns a list that is a slice of src from start to end.
+ *
+ * https://wiki.secondlife.com/wiki/LlList2List
+ * @param src       source list
+ * @param start     start index
+ * @param ende       end index
+ */
+list llList2List( list src, int start, int ende);
+
 /**
  * Returns a float that is at `index` in `src`. `index` supports negative indicies.
- * 
+ *
  * - If index describes a location not in src then zero is returned.
  * - If the type of the element at index in src is not a float it is typecast to a float. If it cannot be
  *   typecast zero is returned.
@@ -352,7 +391,7 @@ float llList2Float(list src, int index);
 
 /**
  * Returns an int that is at `index` in `src`. `index` supports negative indicies.
- * 
+ *
  * - If index describes a location not in src then zero is returned.
  * - If the type of the element at index in src is not an int it is typecast to an int. If it cannot be
  *   typecast zero is returned.
@@ -361,7 +400,7 @@ int llList2Integer(list src, int index);
 
 /**
  * Returns a key that is at `index` in `src`. `index` supports negative indicies.
- * 
+ *
  * - If index describes a location not in src then an empty string (`""`) is returned.
  * - If the type of the element at index in src is not a key it is typecast to a key. If it cannot be
  *   typecast an empty string.
@@ -370,7 +409,7 @@ key llList2Key(list src, int index);
 
 /**
  * Returns a rotation that is at `index` in `src`. `index` supports negative indicies.
- * 
+ *
  * - If index describes a location not in src then `ZERO_ROTATION` is returned.
  * - If the type of the element at index in src is not a rotation then `ZERO_ROTATION` is returned
  */
@@ -378,7 +417,7 @@ rotation llList2Rot(list src, int index);
 
 /**
  * Returns a string that is at `index` in `src`. `index` supports negative indicies.
- * 
+ *
  * - If index describes a location not in src then an empty string (`""`) is returned.
  * - If the type of the element at index in src is not a key it is typecast to a string.
  */
@@ -386,7 +425,7 @@ string llList2String(list src, int index);
 
 /**
  * Returns a vector that is at `index` in `src`. `index` supports negative indicies.
- * 
+ *
  * - If index describes a location not in src then `ZERO_VECTOR` is returned.
  * - If the type of the element at index in src is not a vector then `ZERO_VECTOR` is returned
  */
@@ -394,11 +433,11 @@ vector llList2Vector(list src, int index);
 
 /**
  * Returns the integer index of the first instance of `test` in `src`.
- * 
+ *
  * ### Caveats
  * - If `test` is not found in `src`, -1 is returned.
  * - If `test` is an empty list the value returned is 0 rather than -1.
- * 
+ *
  * @param src  what to search in (haystack)
  * @param test what to search for (needle)
  */
@@ -407,7 +446,7 @@ int llListFindList(list src, list test);
 /**
  * Returns a float that is the result of performing statistical aggregate function `operation` on `src`. If a list entry
  * type is not a float or an integer it is silently ignored.
- * 
+ *
  * @param operation A `LIST_STAT_*` flag
  * @param src The input list
  */
@@ -416,13 +455,198 @@ float llListStatistics(ListStat operation, list src);
 /**
  * Returns a list of all the entries in the strided list whose index is a multiple of stride in the range start to end. This is
  * equivalent to the slicing operation `src[from:to:stride]`. This function supports negative integers
- * 
+ *
  * @param src    The source list to take from
  * @param from   The start index, inclusive
  * @param to     The end index
  * @param stride The step size, if less than 1 it is assumed to be 1
  */
 list llList2ListStrided(list src, int from, int to, int stride);
+
+
+/**
+ * Request limit bytes to be reserved for this script.
+ * Returns the boolean (an integer) TRUE if the memory limit was successfully set (or FALSE if not).
+ *
+ * https://wiki.secondlife.com/wiki/LlSetMemoryLimit
+ * @param limit  Max Memory
+ */
+int llSetMemoryLimit( int limit );
+
+/**
+ * Returns the integer of the number of bytes of memory currently in use by the script.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetUsedMemory
+ */
+int llGetUsedMemory( );
+
+/**
+ * Returns the integer of the number of free bytes of memory the script can use.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetFreeMemory
+ */
+int llGetFreeMemory( );
+
+/**
+ * Returns the attach_point (an integer) the object is attached to or zero if it is either not attached or is pending detachment.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetAttached
+ */
+int llGetAttached( );
+
+/**
+ * Returns the key (UUID) of the owner of the object.
+ *
+ * Returns an empty key if number does not relate to a valid sensed object
+ *
+ * https://wiki.secondlife.com/wiki/LlDetectedOwner
+ * @param number Index of detection information
+ */
+key llDetectedOwner( int number );
+
+/**
+ * Resets the script-time timer to zero.
+ *
+ * https://wiki.secondlife.com/wiki/LlResetTime
+ */
+void llResetTime( );
+
+/**
+ * Returns a float that is script time in seconds with subsecond precision since the script started, was last reset, or call to either llResetTime or llGetAndResetTime.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetTime
+ */
+float llGetTime( );
+
+/**
+ * Returns an integer that is the integer value of val rounded towards negative infinity (return <= val).
+ *
+ * https://wiki.secondlife.com/wiki/LlFloor
+ *
+ * @param val   Any valid float value
+ */
+int llFloor( float val );
+
+/**
+ * Returns a float that is pseudo random in the range [0.0, mag) or (mag, 0.0].[1]
+ * This means that the returned value can be any value in the range 0.0 to mag including 0.0, but not including the value of mag itself. The sign of mag matches the return
+ *
+ * https://wiki.secondlife.com/wiki/LlFrand
+ * @param mag   Any valid float value
+ */
+float llFrand( float mag );
+
+/**
+ * Returns an integer that is the positive version of val.
+ *
+ * https://wiki.secondlife.com/wiki/LlAbs
+ * @param val   Any integer value
+ */
+int llAbs( int val );
+
+
+/**
+ * Returns a list that is a copy of src but with the slice from start to end removed.
+ *
+ * https://wiki.secondlife.com/wiki/LlDeleteSubList
+ * @param src       source
+ * @param start     start index
+ * @param ende      end index
+ */
+list llDeleteSubList( list src, int start, int ende );
+
+/**
+ * Returns a list that is a copy of dest with start through end removed and src inserted at start.
+ *
+ * https://wiki.secondlife.com/wiki/LlListReplaceList
+ * @param dest      destination
+ * @param src       source
+ * @param start     start index
+ * @param ende      end index
+ */
+list llListReplaceList( list dest, list src, int start, int ende );
+
+/**
+ * Returns a list that is src sorted by stride.
+ *
+ * https://wiki.secondlife.com/wiki/LlListSort
+ * @param src           List to be sorted.
+ * @param stride        number of entries per stride, if less than 1 it is assumed to be 1
+ * @param ascending     if TRUE then the sort order is ascending, otherwise the order is descending.
+
+ */
+list llListSort( list src, int stride, int ascending );
+
+/**
+ * Returns the string dst with src inserted starting at pos.
+ *
+ * https://wiki.secondlife.com/wiki/LlInsertString
+ * @param dst   destination of insertion
+ * @param pos   position index for insert, first is 0
+ * @param src   source string to be inserted
+ */
+string llInsertString( string dst, int pos, string src );
+
+/**
+ * Shows a dialog box on avatar's screen with the text message.
+ * It contains a text box for input, any text that is entered is said by avatar on channel when the "Submit" button is clicked.
+ *
+ * https://wiki.secondlife.com/wiki/LlTextBox
+ * @param avatar    avatar UUID that is in the same region
+ * @param message   message to be displayed in the text box
+ * @param channel   output chat channel, any integer value
+ */
+void llTextBox( key avatar, string message, int channel );
+
+/**
+ * Displays text that hovers over the prim with specific color and translucency (specified with alpha).
+ *
+ * Preferred method to remove a prim's floating text.
+ * llSetText("", ZERO_VECTOR, 0);
+ *
+ * https://wiki.secondlife.com/wiki/LlSetText
+ * @param text      floating text to display
+ * @param color     color in RGB <R, G, B> (<0.0, 0.0, 0.0> = black, <1.0, 1.0, 1.0> = white)
+ * @param alpha     from 0.0 (clear) to 1.0 (solid) (0.0 <= alpha <= 1.0)
+ */
+void llSetText( string text, vector color, float alpha );
+
+/**
+ * Performs a single scan for name and id with type within radius meters and arc radians of forward vector.
+ * Script execution continues immediately. When the scan is completed, a sensor or no_sensor event is put in the event queue.
+ *
+ * https://wiki.secondlife.com/wiki/LlSensor
+ * @param name      object or avatar name!
+ * @param id        group, avatar or object UUID that is in the same region
+ * @param type      bit field (AGENT, AGENT_BY_LEGACY_NAME, AGENT_BY_USERNAME, ACTIVE, PASSIVE, and/or SCRIPTED)
+ * @param radius    distance in meters from center, [0.0, 96.0]
+ * @param arc       the max angle between the object's local X-axis and detectable objects, [0.0, PI]
+ */
+void llSensor( string name, key id, Sensor type, float radius, float arc );
+
+/**
+ * Removes the sensor setup by llSensorRepeat.
+ * There are no parameters or return value for this function, as only one llSensorRepeat can be specified per script.
+ *
+ * https://wiki.secondlife.com/wiki/LlSensorRemove
+ */
+void llSensorRemove( );
+
+/**
+ * Performs a scan for name and id with type within range meters and arc radians of forward vector and repeats every rate seconds. The first scan is not performed until rate seconds have passed.
+ * Script execution continues immediately. Whenever a scan is completed, a sensor or no_sensor event is put in the event queue.
+ *
+ * https://wiki.secondlife.com/wiki/LlSensorRepeat
+ * @param name      Object or avatar name!
+ * @param id        group, avatar or object UUID
+ * @param type      mask (AGENT_BY_LEGACY_NAME, AGENT_BY_USERNAME, ACTIVE, PASSIVE, and/or SCRIPTED)
+ * @param radius    distance in meters from center, [0.0, 96.0]
+ * @param arc       the max angle between the object's local X-axis and detectable objects, [0.0, PI]
+ * @param rate      how often a scan is performed
+ */
+void llSensorRepeat( string name, key id, Sensor type, float radius, float arc, float rate );
+
+
 
 
 
@@ -462,12 +686,12 @@ void rlvRedirectChat(AddRemove value, int channel);
 
 /**
  * ### Partially or completely blind the avatar
- * 
+ *
  * When active, these two restriction make the viewer draw several concentric spheres around the avatar, with increasing
  * opacities going from <min_alpha> at <min_distance> to <max_alpha> at <max_distance>. The result looks like fog darkening
  * gradually as the distance increases, and it can completely block the view if `camdrawalphamax` is set to 1 (the default).
  * There are several matters to take into account when issuing these restrictions:
- * 
+ *
  * - There is fog (gradual darkening of the view) only if both `camdrawalphamin` and `camdrawalphamax` are specified and
  *   different. If either of them is omitted, only one sphere is rendered (which may be what the scripter wants).
  * - The number of spheres to draw is not fixed and depends on the viewer (for example, a debug setting can let the user
@@ -479,14 +703,14 @@ void rlvRedirectChat(AddRemove value, int channel);
  *   force to Mouselook, and the sphere would not be rendered by the viewer under that limit).
  * - The limits retained by the viewer are the lowest maxima and the highest minima, if several of them are issued by
  *   different objects. - The avatars' name tags and the hovertexts in world fade to invisibility beyond `camdrawmin`.
- * 
+ *
  * N.B. `Yes` indicates removing the restriction, and `No` indicates adding the restriction.
  */
 void rlvCamDrawDistance(YesNo value, float minDistance, float maxDistance, float minAlpha, float maxAlpha);
 
 /**
  * ### Allow/prevent moving the camera too far from the avatar
- * 
+ *
  * When active, this restriction prevents the user from moving the camera too far from the avatar, either with the
  * mouse wheel or when focusing with the Alt key. If <max_distance> is set to 0, this command forces the avatar to
  * stay in Mouselook. If several objects issue this restriction, the viewer retains the smallest value of all.
@@ -506,6 +730,7 @@ extern const float PI;
 
 /** The object has changed owners. This event occurs in the original object when a user takes it or takes a copy of it or when the owner deeds it to a group. The event occurs in the new object when it is first rezzed. */
 extern const int CHANGED_OWNER;
+extern const int CHANGED_INVENTORY;
 
 extern const int LINK_ROOT; // refers to the root prim in a multi-prim linked set
 extern const int LINK_SET; // refers to all prims
@@ -514,6 +739,13 @@ extern const int LINK_ALL_CHILDREN; // refers to all children, (everything but t
 extern const int LINK_THIS; // refers to the prim the script is in
 
 extern const int ALL_SIDES;
+
+extern const Sensor AGENT;
+extern const Sensor AGENT_BY_LEGACY_NAME;
+extern const Sensor AGENT_BY_USERNAME;
+extern const Sensor ACTIVE;
+extern const Sensor PASSIVE;
+extern const Sensor SCRIPTED;
 
 extern const Permission PERMISSION_DEBIT; // take money from agent's account
 extern const Permission PERMISSION_TAKE_CONTROLS; // take agent's controls
@@ -524,7 +756,7 @@ extern const Permission PERMISSION_TRACK_CAMERA; // track the agent's camera pos
 extern const Permission PERMISSION_CONTROL_CAMERA; // control the agent's camera (must be sat on or attached; automatically revoked on stand or detach)
 extern const Permission PERMISSION_TELEPORT; // teleport the agent
 extern const Permission PERMISSION_SILENT_ESTATE_MANAGEMENT; // manage estate access without notifying the owner of changes
-extern const Permission PERMISSION_OVERRIDE_ANIMATIONS; // configure the overriding of default animations on agent  
+extern const Permission PERMISSION_OVERRIDE_ANIMATIONS; // configure the overriding of default animations on agent
 extern const Permission PERMISSION_RETURN_OBJECTS; // Used by `llReturnObjectsByOwner` and `llReturnObjectsByID` to return objects from parcels
 
 extern const ListStat LIST_STAT_RANGE; // Calculates the range.
@@ -550,7 +782,7 @@ extern const ListStat LIST_STAT_GEOMETRIC_MEAN; // Calculates the geometric mean
 #define bool integer
 #define false FALSE
 #define true TRUE
-#define void 
+#define void
 #define list(...) [__VA_ARGS__]
 #define vector(x, y, z) <x, y, z>
 #define rotation(x, y, z, s) <x, y, z, s>
