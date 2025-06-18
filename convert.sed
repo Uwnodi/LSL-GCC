@@ -5,7 +5,7 @@ s/_START ([0-9\.]+) _END/"\1"/g
 s/_START ([^"]*) _END/"" + (string)(\1) + ""/g
 
 # Simplify redundant string casting syntax
-s/\(string\)"([^"]*)"/"\1"/g
+s/\(string\)\s?"([^"]*)"/"\1"/g
 
 # Remove string concatenation operators (plus format)
 s/" \+ "//g
