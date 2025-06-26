@@ -27,6 +27,11 @@ struct state {};
 #define begin(name) struct {
 #define end } ;
 
+// Jump statements
+#define jump(name)
+#define jumpmark(name)
+
+
 
 /*
  * LSL Data types are:
@@ -77,6 +82,7 @@ struct string {
     explicit string(list) {}
     explicit string(vector) {}
     explicit string(rotation) {}
+    explicit string(key) {}
 
     explicit operator int();
     explicit operator float();
@@ -90,6 +96,7 @@ struct string {
 // Standalone method to allow `const char* + string` to be included
 // Note that this disallows `const char* + const char*`, which is fine given that should be always unnecessary
 string operator+(string, string);
+
 
 struct key {
     key() {}
@@ -147,7 +154,7 @@ struct Sensor {
 
 struct ListStat {};
 
-
+struct StringOption {};
 
 
 // ===== LSL API ===== //
@@ -528,6 +535,15 @@ float llGetTime( );
 int llFloor( float val );
 
 /**
+ * Returns an integer that is the integer value of val rounded towards positive infinity (return >= val).
+ *
+ * https://wiki.secondlife.com/wiki/LlCeil
+ * @param val   Any valid float value
+
+ */
+int llCeil( float val );
+
+/**
  * Returns a float that is pseudo random in the range [0.0, mag) or (mag, 0.0].[1]
  * This means that the returned value can be any value in the range 0.0 to mag including 0.0, but not including the value of mag itself. The sign of mag matches the return
  *
@@ -647,6 +663,237 @@ void llSensorRemove( );
 void llSensorRepeat( string name, key id, Sensor type, float radius, float arc, float rate );
 
 
+/**
+ * Returns a string that is the result of removing characters from src from start to end.
+ *
+ * https://wiki.secondlife.com/wiki/LlDeleteSubString
+ * @param src       source string
+ * @param start     start index
+ * @param ende      end index
+ */
+string llDeleteSubString( string src, int start, int ende );
+
+
+/**
+ * Reads an unprotected name:value pair from the linkset's datastore.
+ * Returns a string value corresponding to name
+ *
+ * https://wiki.secondlife.com/wiki/LlLinksetDataRead
+ * @param name      The key of the linkset name:value pair to be read.
+ */
+string llLinksetDataRead( string name );
+
+/**
+ * Creates or updates an unprotected name:value pair from the linkset's datastore.
+ *
+ * https://wiki.secondlife.com/wiki/LlLinksetDataWrite
+ * @param name      The key of the name:value pair in the datastore to be updated or created.
+ * @param integer   The value of the name:value pair.
+ */
+int llLinksetDataWrite( string name, string value );
+
+/**
+ * The llLinksetDataReset function erases all name:value pairs stored in the linkset's datastore.
+ * When this function is called the linkset_data event is triggered in all scripts running in the linkset with an action of LINKSETDATA_RESET.
+ *
+ * https://wiki.secondlife.com/wiki/LlLinksetDataReset
+ */
+
+void llLinksetDataReset( );
+
+/**
+ * Returns a list of the keys in the datastore, ordered alphabetically.
+ *
+ * https://wiki.secondlife.com/wiki/LlLinksetDataListKeys
+ * @param start     The first key to return.
+ * @param count     The number of keys to return.
+
+ */
+list llLinksetDataListKeys( int start, int count );
+
+/**
+ * Removes an unprotected name:value pair from the linkset's datastore. If the pair was created
+ * Returns an integer success or failure code.
+ *
+ * https://wiki.secondlife.com/wiki/LlLinksetDataDelete
+ * @param name      The key of the linkset name:value pair to be deleted.
+ */
+int llLinksetDataDelete( string name );
+
+/**
+ * Gets the value indicated by specifiers from the json string.
+ * Returns a string made by parsing json, a string representing json and traversing as specified by specifiers.
+ *
+ * https://wiki.secondlife.com/wiki/LlJsonGetValue
+ * @param json          json
+ * @param specifiers    specifiers
+ */
+string llJsonGetValue( string json, list specifiers );
+
+/**
+ * Returns, if successful, a new JSON text string which is json with the value indicated by the specifiers list set to value.
+ * If unsuccessful (usually because of specifying an out of bounds array index) it returns JSON_INVALID.
+ *
+ * https://wiki.secondlife.com/wiki/LlJsonSetValue
+ * @param json          source JSON data
+ * @param specifiers    location of the of the value to be added, updated or deleted.
+ * @param value         new value or JSON_DELETE flag.
+ */
+string llJsonSetValue( string json, list specifiers, string value );
+
+/**
+ * This function takes a string representing JSON, and returns a list of the top level.
+ * Returns a list made by parsing src, a string representing json.
+ *
+ * https://wiki.secondlife.com/wiki/LlJson2List
+ * @param src
+ */
+list llJson2List( string src );
+
+/**
+ * Requests the line line of the notecard name from the dataserver.
+ * Returns the handle (a key) for a dataserver event response.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetNotecardLine
+ * @param name      a notecard in the inventory of the prim this script is in or a UUID of a notecard
+ * @param line      Line number in a notecard (the index starts at zero).
+ */
+key llGetNotecardLine( string name, int line );
+
+/**
+ * Gets the line of the notecard name from the region's notecard cache immediately without raising a dataserver event.
+ * Returns the string containing the text of the requested line from the notecard.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetNotecardLineSync
+ * @param name      a notecard in the inventory of the prim this script is in or a UUID of a notecard
+ * @param line      Line number in a notecard (the index starts at zero).
+ */
+string llGetNotecardLineSync( string name, int line );
+
+/**
+ * Gets the JSON type for the value in json at the location specifiers.Returns the string specifying the type of the value at specifiers in json.
+ *
+ * https://wiki.secondlife.com/wiki/LlJsonValueType
+ * @param json          A string serialization of a json object.
+ * @param specifiers    A path to a value in the json parameter.
+ */
+string llJsonValueType( string json, list specifiers );
+
+/**
+ * Returns a string that is the substring of src from start to end, leaving the original string intact.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetSubString
+ * @param src
+ * @param start     start index
+ * @param ende      end index
+*/
+string llGetSubString( string src, int start, int ende );
+
+/**
+ * Returns a string that is the result of replacing the first count matching instances pattern in src with replacement_pattern.
+ *
+ * https://wiki.secondlife.com/wiki/LlReplaceSubString
+ * @param src
+ * @param pattern
+ * @param replacement_pattern
+ * @param count
+ */
+string llReplaceSubString( string src, string pattern, string replacement_pattern, int count );
+
+/**
+ * Returns an integer that is the index of the first instance of pattern in source.
+ *
+ * https://wiki.secondlife.com/wiki/LlSubStringIndex
+ * @param source      to search in (haystack)
+ * @param pattern      to search for (needle)
+ */
+int llSubStringIndex( string source, string pattern );
+
+/**
+ * Returns a string that is src with leading and/or trailing white space (spaces, tabs, and line feeds) trimmed from it.
+ *
+ * https://wiki.secondlife.com/wiki/LlStringTrim
+ * @param src
+ * @param type      STRING_TRIM* flag(s)
+ */
+string llStringTrim( string src, StringOption type );
+
+/**
+ *Returns a key that is the UUID of the inventory name
+ *
+ * https://wiki.secondlife.com/wiki/LlGetInventoryKey
+ * @param name      	an item in the inventory of the prim this script is in
+ */
+key llGetInventoryKey( string name );
+
+
+/**
+ * Returns a string that is the unique username of the avatar specified by id.
+ *
+ * https://wiki.secondlife.com/wiki/LlGetUsername
+ * @param id        avatar UUID that is in the same region or is otherwise known to the region
+
+ */
+string llGetUsername( key id );
+
+/**
+ * Returns a boolean (an integer) that is TRUE if uuid and the prim the script is in are of the same group, otherwise FALSE.
+ *
+ * https://wiki.secondlife.com/wiki/LlSameGroup
+ * @param uuid      group, avatar or prim UUID that is in the same region
+
+ */
+int llSameGroup( key uuid );
+
+/**
+ * Puts the script to sleep for sec seconds. The script will not do anything during this time.
+ * The script will sleep at least until the next server-frame, which happen every (1/45 = ~0.02222) seconds under normal conditions.
+ * If sec is zero or less, the script will not sleep at all.
+ *
+ * https://wiki.secondlife.com/wiki/LlSleep
+ * @param sec       seconds to sleep
+
+ */
+void llSleep( float sec );
+
+/**
+ * The llLinksetDataAvailable returns the number of bytes available in the linkset's datastore.
+ * Returns an integer number of bytes available in the linkset store.
+ */
+int llLinksetDataAvailable( );
+
+/**
+ * Plays attached sound looping indefinitely at volume
+ *
+ * https://wiki.secondlife.com/wiki/LlLoopSound
+ * @param sound     a sound in the inventory of the prim this script is in or a UUID of a sound
+ * @param volume    between 0.0 (silent) and 1.0 (loud) (0.0 <= volume <= 1.0)
+ */
+void llLoopSound( string sound, float volume );
+
+/**
+ * Stops the attached sound(s) currently playing, if they were started by llLoopSound
+ *
+ * https://wiki.secondlife.com/wiki/LlStopSound
+ */
+void llStopSound( );
+
+/**
+ * Returns a string of comma separated values taken in order from src.
+ *
+ * https://wiki.secondlife.com/wiki/LlList2CSV
+ * @param src
+ */
+string llList2CSV( list src );
+
+/**
+ * This function takes a string of values separated by commas, and turns it into a list.
+ * Returns a list made by parsing src, a string of comma separated values.
+ *
+ * https://wiki.secondlife.com/wiki/LlCSV2List
+ * @param src
+ */
+list llCSV2List( string src );
 
 
 
@@ -687,6 +934,8 @@ void rlvRedirectChat(AddRemove value, int channel);
 /**
  * ### Partially or completely blind the avatar
  *
+ * ### Attention: Only for RLV working. For RLVa it is "setsphere"
+ *
  * When active, these two restriction make the viewer draw several concentric spheres around the avatar, with increasing
  * opacities going from <min_alpha> at <min_distance> to <max_alpha> at <max_distance>. The result looks like fog darkening
  * gradually as the distance increases, and it can completely block the view if `camdrawalphamax` is set to 1 (the default).
@@ -726,6 +975,8 @@ extern const key NULL_KEY;
 extern const vector ZERO_VECTOR;
 extern const rotation ZERO_ROTATION;
 
+extern const string EOF;
+
 extern const float PI;
 
 /** The object has changed owners. This event occurs in the original object when a user takes it or takes a copy of it or when the owner deeds it to a group. The event occurs in the new object when it is first rezzed. */
@@ -739,6 +990,20 @@ extern const int LINK_ALL_CHILDREN; // refers to all children, (everything but t
 extern const int LINK_THIS; // refers to the prim the script is in
 
 extern const int ALL_SIDES;
+
+extern const string JSON_INVALID;
+extern const string JSON_OBJECT;
+extern const string JSON_ARRAY;
+extern const string JSON_NUMBER;
+extern const string JSON_STRING;
+extern const string JSON_NULL;
+extern const string JSON_TRUE;
+extern const string JSON_FALSE;
+extern const string JSON_DELETE;
+
+extern const StringOption STRING_TRIM_HEAD;
+extern const StringOption STRING_TRIM_TAIL;
+extern const StringOption STRING_TRIM;
 
 extern const Sensor AGENT;
 extern const Sensor AGENT_BY_LEGACY_NAME;
@@ -775,6 +1040,10 @@ extern const ListStat LIST_STAT_GEOMETRIC_MEAN; // Calculates the geometric mean
 
 #define begin(name) CALL(ARG3, IS_ ## name, default, state name) {
 #define end }
+
+// Jump statements (LSL mode)
+#define jump(name) jump name
+#define jumpmark(name) @name
 
 #define cast_float (float)
 
